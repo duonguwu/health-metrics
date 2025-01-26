@@ -13,6 +13,13 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+    def create(self, validated_data):
+        # Tạo user mới và hash mật khẩu
+        user = User.objects.create_user(**validated_data)
+        return user
 
 class BloodGlucoseSerializer(serializers.Serializer):
     """This class is used to serialize the BloodGlucose model.
