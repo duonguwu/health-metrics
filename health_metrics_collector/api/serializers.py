@@ -1,6 +1,11 @@
+import datetime
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+
 from .models import BloodGlucose, BloodPressure
+
 
 User = get_user_model()
 
@@ -36,6 +41,26 @@ class BloodGlucoseSerializer(serializers.Serializer):
     timestamp = serializers.DateTimeField()
     meal = serializers.ChoiceField(choices=['pre-meal', 'post-meal', 'fasting', 'before bed'])
 
+    def validate_blood_glucose(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Blood glucose must be positive.")
+        return value
+    
+    def validate_unit(self, value):
+        if value not in ['mg/dL', 'mmol/L']:
+            raise serializers.ValidationError("Unit must be 'mg/dL' or 'mmol/L'.")
+        return value
+    
+    def validate_meal(self, value):
+        if value not in ['pre-meal', 'post-meal', 'fasting', 'before bed']:
+            raise serializers.ValidationError("Meal must be 'pre-meal', 'post-meal', 'fasting', or 'before bed'.")
+        return value
+    
+    def validate_timestamp(self, value):
+        if value > timezone.now():
+            raise serializers.ValidationError("Timestamp cannot be in the future.")
+        return value
+
     def create(self, validated_data):
         return BloodGlucose.objects.create(**validated_data)
 
@@ -59,6 +84,26 @@ class BloodPressureSerializer(serializers.Serializer):
     diastolic = serializers.IntegerField()
     timestamp = serializers.DateTimeField()
     unit = serializers.CharField(default='mm Hg')
+
+    def validate_systolic(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Systolic blood pressure must be positive.")
+        return value
+    
+    def validate_diastolic(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Diastolic blood pressure must be positive.")
+        return value
+    
+    def validate_unit(self, value):
+        if value != 'mm Hg':
+            raise serializers.ValidationError("Unit must be 'mm Hg'.")
+        return value
+    
+    def validate_timestamp(self, value):
+        if value > timezone.now():
+            raise serializers.ValidationError("Timestamp cannot be in the future.")
+        return value
 
     def create(self, validated_data):
         """This method is used to create a new BloodPressure object.
