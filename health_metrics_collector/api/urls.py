@@ -7,7 +7,12 @@ from rest_framework_simplejwt.views import (
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from .views import BloodGlucoseViewSet, BloodPressureViewSet
+from .views import (
+    BloodGlucoseViewSet,
+    BloodPressureViewSet,
+    UserRegistrationView,
+    CustomTokenObtainPairView,
+)
 
 router = DefaultRouter()
 router.register(r'glucose', BloodGlucoseViewSet, basename='glucose')
@@ -19,4 +24,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('register/', UserRegistrationView.as_view(), name='register'),
+    path('login/', CustomTokenObtainPairView.as_view(), name='login'),
 ]

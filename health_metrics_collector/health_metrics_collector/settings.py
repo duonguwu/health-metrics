@@ -24,8 +24,11 @@ MONGO_HOST = 'localhost'
 MONGO_PORT = 27017
 MONGO_USER = os.getenv('MONGO_USER')
 MONGO_PASSWORD = os.getenv('MONGO_PASSWORD')
+MONGO_URI = os.getenv('MONGO_URI')
 
-mongoengine.connect(db=MONGO_DB_NAME, host=MONGO_HOST, username=MONGO_USER, password=MONGO_PASSWORD)
+# mongoengine.connect(db=MONGO_DB_NAME, host=MONGO_HOST, username=MONGO_USER, password=MONGO_PASSWORD)
+
+mongoengine.connect(host=MONGO_URI)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -56,6 +59,9 @@ INSTALLED_APPS = [
     'api',
     'drf_spectacular',
 ]
+
+STATIC_URL = '/static/'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

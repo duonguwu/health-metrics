@@ -9,5 +9,4 @@ class IsOwnerPermission(BasePermission):
             Checks if the user associated with the object is the same as the requesting user.
     """
     def has_object_permission(self, request, view, obj):
-        # Check valid user
-        return obj.user == request.user
+        return obj.user_id == request.user.id 

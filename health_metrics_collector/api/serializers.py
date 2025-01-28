@@ -1,10 +1,12 @@
 import datetime
 
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from .models import BloodGlucose, BloodPressure
+
 
 
 User = get_user_model()
@@ -131,3 +133,24 @@ class BloodPressureSerializer(serializers.Serializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+    
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['phone_number', 'password', 'first_name', 'last_name']
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            phone_number=validated_data['phone_number'],
+            password=validated_data['password'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+        )
+        return user
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        attrs['username'] = attrs.get('phone_number', '')
+        return super().validate(attrs)

@@ -1,9 +1,16 @@
 from django.shortcuts import render
+from rest_framework import generics, permissions
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import BloodGlucose, BloodPressure
-from .serializers import BloodGlucoseSerializer, BloodPressureSerializer
+from .serializers import (
+    BloodGlucoseSerializer,
+    BloodPressureSerializer,
+    UserRegistrationSerializer,
+    CustomTokenObtainPairSerializer,
+)
 from .permissions import IsOwnerPermission
 
 class BloodGlucoseViewSet(ModelViewSet):
@@ -26,10 +33,10 @@ class BloodGlucoseViewSet(ModelViewSet):
 
     # Return data of user who is logged in
     def get_queryset(self):
-        return BloodGlucose.objects.filter(user=self.request.user)
+        return BloodGlucose.objects.filter(user_id=self.request.user.id)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user_id=self.request.user.id)
 
 class BloodPressureViewSet(ModelViewSet):
     """
@@ -48,8 +55,21 @@ class BloodPressureViewSet(ModelViewSet):
 
     # Return data of user who is logged in
     def get_queryset(self):
-        return BloodPressure.objects.filter(user=self.request.user)
+        return BloodPressure.objects.filter(user_id=self.request.user.id)
     
     # Save the serializer with the current user as the owner
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user_id=self.request.user.id)
+
+class UserRegistrationView(generics.CreateAPIView):
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [permissions.AllowAny]
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        print("Access Token:", response.data['access']) 
+        print("Refresh Token:", response.data['refresh'])
+        return response

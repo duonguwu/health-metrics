@@ -55,7 +55,7 @@ class BloodGlucose(Document):
         timestamp (datetime): The date and time when the measurement was taken.
         meal (str): The context of the measurement, either 'pre-meal', 'post-meal', 'fasting', or 'before bed'.
     """
-    user = ReferenceField("User", required=True)
+    user_id = IntField(required=True)
     blood_glucose = FloatField(required=True)
     unit = StringField(choices=['mg/dL', 'mmol/L'], required=True)
     timestamp = DateTimeField(required=True)
@@ -71,7 +71,7 @@ class BloodPressure(Document):
         timestamp (datetime): The date and time when the blood pressure reading was taken. This field is required.
         unit (str): The unit of measurement for the blood pressure reading. Defaults to 'mm Hg'. This field is required.
     """
-    user = ReferenceField("User", required=True)
+    user_id = IntField(required=True)
     systolic = IntField(required=True)
     diastolic = IntField(required=True)
     timestamp = DateTimeField(required=True)
