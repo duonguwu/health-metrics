@@ -3,6 +3,9 @@ from rest_framework import generics, permissions
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.exceptions import NotFound
+from rest_framework.response import Response
+from rest_framework import status
 
 from .models import BloodGlucose, BloodPressure
 from .serializers import (
@@ -38,6 +41,28 @@ class BloodGlucoseViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user_id=self.request.user.id)
 
+    def get_object(self):
+        """Truy vấn dữ liệu theo ID và user_id"""
+        pk = self.kwargs.get("pk")  # Lấy ID từ URL
+        try:
+            return BloodGlucose.objects.get(id=pk, user_id=self.request.user.id)
+        except BloodGlucose.DoesNotExist:
+            raise NotFound("Blood Glucose record not found")
+
+    def update(self, request, *args, **kwargs):
+        """Cập nhật dữ liệu Blood Glucose"""
+        blood_glucose = self.get_object()
+        serializer = self.get_serializer(blood_glucose, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "status": "success",
+                "status_code": status.HTTP_200_OK,
+                "message": "Blood glucose record updated successfully",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class BloodPressureViewSet(ModelViewSet):
     """
     A viewset for viewing and editing blood pressure instances.
@@ -60,6 +85,29 @@ class BloodPressureViewSet(ModelViewSet):
     # Save the serializer with the current user as the owner
     def perform_create(self, serializer):
         serializer.save(user_id=self.request.user.id)
+
+    def get_object(self):
+        """Truy vấn dữ liệu theo ID và user_id"""
+        pk = self.kwargs.get("pk")
+        try:
+            return BloodPressure.objects.get(id=pk, user_id=self.request.user.id)
+        except BloodPressure.DoesNotExist:
+            raise NotFound("Blood Pressure record not found")
+    
+    def update(self, request, *args, **kwargs):
+        """Cập nhật dữ liệu Blood Pressure"""
+        blood_pressure = self.get_object()
+        serializer = self.get_serializer(blood_pressure, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "status": "success",
+                "status_code": status.HTTP_200_OK,
+                "message": "Blood pressure record updated successfully",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer

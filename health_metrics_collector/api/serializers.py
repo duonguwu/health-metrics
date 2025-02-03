@@ -40,7 +40,7 @@ class BloodGlucoseSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     blood_glucose = serializers.FloatField()
     unit = serializers.ChoiceField(choices=['mg/dL', 'mmol/L'])
-    timestamp = serializers.DateTimeField()
+    timestamp = serializers.DateTimeField(read_only=True)
     meal = serializers.ChoiceField(choices=['pre-meal', 'post-meal', 'fasting', 'before bed'])
 
     def validate_blood_glucose(self, value):
@@ -84,7 +84,7 @@ class BloodPressureSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     systolic = serializers.IntegerField()
     diastolic = serializers.IntegerField()
-    timestamp = serializers.DateTimeField()
+    timestamp = serializers.DateTimeField(read_only=True)
     unit = serializers.CharField(default='mm Hg')
 
     def validate_systolic(self, value):
@@ -116,6 +116,8 @@ class BloodPressureSerializer(serializers.Serializer):
         Returns:
             BloodPressure: The newly created BloodPressure object.
         """
+        validated_data['timestamp'] = timezone.now()
+        validated_data['unit'] = 'mm Hg'
         return BloodPressure.objects.create(**validated_data)
 
     def update(self, instance, validated_data):

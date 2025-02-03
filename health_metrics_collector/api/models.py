@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django.core.validators import RegexValidator
 
 from mongoengine import Document, StringField, FloatField, IntField, DateTimeField, ReferenceField
@@ -58,7 +59,7 @@ class BloodGlucose(Document):
     user_id = IntField(required=True)
     blood_glucose = FloatField(required=True)
     unit = StringField(choices=['mg/dL', 'mmol/L'], required=True)
-    timestamp = DateTimeField(required=True)
+    timestamp = DateTimeField(default=timezone.now, required=True)
     meal = StringField(choices=['pre-meal', 'post-meal', 'fasting', 'before bed'], required=True)
 
 class BloodPressure(Document):
@@ -74,5 +75,5 @@ class BloodPressure(Document):
     user_id = IntField(required=True)
     systolic = IntField(required=True)
     diastolic = IntField(required=True)
-    timestamp = DateTimeField(required=True)
+    timestamp = DateTimeField(default=timezone.now, required=True)
     unit = StringField(default='mm Hg', required=True)
