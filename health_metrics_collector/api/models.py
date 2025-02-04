@@ -20,6 +20,10 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(phone_number, password, **extra_fields)
 
+class ActiveUserManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_active=True)
+
 class User(AbstractUser):
     username = None  # Delete username field
     
@@ -40,7 +44,11 @@ class User(AbstractUser):
     USERNAME_FIELD = 'phone_number'  # Sử dụng phone_number làm định danh
     REQUIRED_FIELDS = []  # Bỏ các trường bắt buộc khi tạo superuser
 
-    objects = UserManager()
+    is_deleted = models.BooleanField(default=False)
+
+    objects = UserManager()  # Dùng cho việc tạo user
+    active_users = ActiveUserManager()  # Dùng để query user chưa bị xóa
+    all_objects = models.Manager()  # Lấy toàn bộ user
 
     def __str__(self):
         return self.phone_number

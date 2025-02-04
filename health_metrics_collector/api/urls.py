@@ -12,6 +12,9 @@ from .views import (
     BloodPressureViewSet,
     UserRegistrationView,
     CustomTokenObtainPairView,
+    UserUpdateView,
+    soft_delete_user,
+    hard_delete_user,
 )
 
 router = DefaultRouter()
@@ -26,4 +29,7 @@ urlpatterns = [
     path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('register/', UserRegistrationView.as_view(), name='register'),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
+    path("user/update/", UserUpdateView.as_view(), name="user-update"),
+    path("user/soft-delete/", soft_delete_user, name="user-soft-delete"),
+    path("user/hard-delete/", hard_delete_user, name="user-hard-delete"),
 ]

@@ -7,8 +7,6 @@ from django.utils import timezone
 
 from .models import BloodGlucose, BloodPressure
 
-
-
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
@@ -27,6 +25,16 @@ class UserSerializer(serializers.ModelSerializer):
         # Tạo user mới và hash mật khẩu
         user = User.objects.create_user(**validated_data)
         return user
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+
+class UserUpdatePasswordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['password']
 
 class BloodGlucoseSerializer(serializers.Serializer):
     """This class is used to serialize the BloodGlucose model.
