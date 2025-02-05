@@ -76,6 +76,7 @@ python manage.py runserver
 ```http
 POST /api/blood-pressure/
 Content-Type: application/json
+Authorization: Bearer <access_token>
 ```
 ```json
 {
@@ -98,6 +99,7 @@ Content-Type: application/json
 #### Request:
 ```http
 GET /api/blood-pressure/
+Authorization: Bearer <access_token>
 ```
 #### Response:
 ```json

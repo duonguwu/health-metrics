@@ -1,0 +1,18 @@
+#Django
+Django>=4.2
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
+django-cors-headers>=4.3
+django-environ>=0.11
+
+# Database connectors
+mysqlclient>=2.2  
+mongoengine>=0.27  
+
+# RabbitMQ và Celery
+pika>=1.3  # Thư viện giao tiếp với RabbitMQ
+celery[redis]>=5.3  # Celery xử lý tác vụ bất đồng bộ
+
+# Các công cụ hỗ trợ khác
+python-dotenv>=1.0  # Quản lý biến môi trường
+drf-yasg>=1.21  # API documentation (Swagger)
