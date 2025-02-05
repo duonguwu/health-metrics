@@ -1,4 +1,4 @@
-from django.shortcuts import render
+import logging
 
 from rest_framework import generics, permissions
 from rest_framework.viewsets import ModelViewSet
@@ -9,6 +9,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import UpdateAPIView
 from rest_framework.decorators import api_view, permission_classes
+
+from django.core.cache import cache
+from django.http import JsonResponse
 
 from .models import BloodGlucose, BloodPressure
 from .serializers import (
@@ -42,12 +45,23 @@ class BloodGlucoseViewSet(ModelViewSet):
 
     # Return data of user who is logged in
     def get_queryset(self):
-        return BloodGlucose.objects.filter(user_id=self.request.user.id)
+        cache_key = f"blood_glucose_list_{self.request.user.id}"
+        queryset = cache.get(cache_key)
+
+        if not queryset:
+            queryset = list(BloodGlucose.objects.filter(user_id=self.request.user.id))
+            cache.set(cache_key, queryset, timeout=300)  # Cache trong 5 phút
+
+        return queryset
 
     def perform_create(self, serializer):
         # serializer.save(user_id=self.request.user.id)
         instance = serializer.save(user_id=self.request.user.id)
         
+        # Xóa cache danh sách sau khi tạo mới
+        cache_key = f"blood_glucose_list_{self.request.user.id}"
+        cache.delete(cache_key)
+
         # Send message to RabbitMQ
         message = {
             "user_id": instance.user_id,
@@ -61,7 +75,18 @@ class BloodGlucoseViewSet(ModelViewSet):
         """Truy vấn dữ liệu theo ID và user_id"""
         pk = self.kwargs.get("pk")  # Lấy ID từ URL
         try:
-            return BloodGlucose.objects.get(id=pk, user_id=self.request.user.id)
+            cache_key = f"blood_glucose_{pk}_{self.request.user.id}"
+            obj = cache.get(cache_key)
+
+            if not obj:
+                try:
+                    obj = BloodGlucose.objects.get(id=pk, user_id=self.request.user.id)
+                    cache.set(cache_key, obj, timeout=300)  # Cache trong 5 phút
+                except BloodGlucose.DoesNotExist:
+                    raise NotFound("Blood Glucose record not found")
+
+            return obj
+            # return BloodGlucose.objects.get(id=pk, user_id=self.request.user.id)
         except BloodGlucose.DoesNotExist:
             raise NotFound("Blood Glucose record not found")
 
@@ -70,6 +95,10 @@ class BloodGlucoseViewSet(ModelViewSet):
         serializer = self.get_serializer(blood_glucose, data=request.data, partial=True)
         if serializer.is_valid():
             instance = serializer.save()
+
+            # Xóa cache sau khi cập nhật
+            cache.delete(f"blood_glucose_list_{self.request.user.id}")
+            cache.delete(f"blood_glucose_{instance.id}_{self.request.user.id}")
 
             message = {
                 "user_id": instance.user_id,
@@ -105,7 +134,15 @@ class BloodPressureViewSet(ModelViewSet):
     # Return data of user who is logged in
     def get_queryset(self):
         try:
-            return BloodPressure.objects.filter(user_id=self.request.user.id)
+            # return BloodPressure.objects.filter(user_id=self.request.user.id)
+            cache_key = f"blood_pressure_list_{self.request.user.id}"
+            queryset = cache.get(cache_key)
+
+            if not queryset:
+                queryset = list(BloodPressure.objects.filter(user_id=self.request.user.id))
+                cache.set(cache_key, queryset, timeout=300)  # Cache trong 5 phút
+
+            return queryset
         except Exception as e:
             raise NotFound(f"Error retrieving blood pressure records: {str(e)}")
     
@@ -133,7 +170,18 @@ class BloodPressureViewSet(ModelViewSet):
         """Truy vấn dữ liệu theo ID và user_id"""
         pk = self.kwargs.get("pk")
         try:
-            return BloodPressure.objects.get(id=pk, user_id=self.request.user.id)
+            cache_key = f"blood_pressure_{pk}_{self.request.user.id}"
+            obj = cache.get(cache_key)
+
+            if not obj:
+                try:
+                    obj = BloodPressure.objects.get(id=pk, user_id=self.request.user.id)
+                    cache.set(cache_key, obj, timeout=300)  # Cache trong 5 phút
+                except BloodPressure.DoesNotExist:
+                    raise NotFound("Blood Pressure record not found")
+            
+            return obj
+            # return BloodPressure.objects.get(id=pk, user_id=self.request.user.id)
         except BloodPressure.DoesNotExist:
             raise NotFound("Blood Pressure record not found")
         except Exception as e:
@@ -147,6 +195,11 @@ class BloodPressureViewSet(ModelViewSet):
             if serializer.is_valid():
                 # serializer.save()
                 instance = serializer.save()
+
+                # Xóa cache sau khi cập nhật
+                cache.delete(f"blood_pressure_list_{self.request.user.id}")
+                cache.delete(f"blood_pressure_{instance.id}_{self.request.user.id}")
+
                 message = {
                     "user_id": instance.user_id,
                     "systolic": instance.systolic,
