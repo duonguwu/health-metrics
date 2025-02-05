@@ -45,31 +45,42 @@ class BloodGlucoseViewSet(ModelViewSet):
 
     # Return data of user who is logged in
     def get_queryset(self):
-        cache_key = f"blood_glucose_list_{self.request.user.id}"
-        queryset = cache.get(cache_key)
+        try:
+            cache_key = f"blood_glucose_list_{self.request.user.id}"
+            queryset = cache.get(cache_key)
 
-        if not queryset:
-            queryset = list(BloodGlucose.objects.filter(user_id=self.request.user.id))
-            cache.set(cache_key, queryset, timeout=300)  # Cache trong 5 phút
+            if not queryset:
+                queryset = list(BloodGlucose.objects.filter(user_id=self.request.user.id))
+                cache.set(cache_key, queryset, timeout=300)  # Cache trong 5 phút
 
-        return queryset
+            return queryset
+        except Exception as e:
+            logging.error(f"Error retrieving blood glucose records: {str(e)}")
+            raise NotFound(f"Error retrieving blood glucose records: {str(e)}")
 
     def perform_create(self, serializer):
-        # serializer.save(user_id=self.request.user.id)
-        instance = serializer.save(user_id=self.request.user.id)
-        
-        # Xóa cache danh sách sau khi tạo mới
-        cache_key = f"blood_glucose_list_{self.request.user.id}"
-        cache.delete(cache_key)
+        try:
+            instance = serializer.save(user_id=self.request.user.id)
+            
+            # Xóa cache danh sách sau khi tạo mới
+            cache_key = f"blood_glucose_list_{self.request.user.id}"
+            cache.delete(cache_key)
 
-        # Send message to RabbitMQ
-        message = {
-            "user_id": instance.user_id,
-            "blood_glucose": instance.blood_glucose,
-            "unit": instance.unit,
-            "meal": instance.meal,
-        }
-        publish_message("blood_glucose_queue", message)
+            # Send message to RabbitMQ
+            message = {
+                "user_id": instance.user_id,
+                "blood_glucose": instance.blood_glucose,
+                "unit": instance.unit,
+                "meal": instance.meal,
+            }
+            publish_message("blood_glucose_queue", message)
+        except Exception as e:
+            logging.error(f"Error creating blood glucose record: {str(e)}")
+            raise Response({
+                "status": "error",
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get_object(self):
         """Truy vấn dữ liệu theo ID và user_id"""
@@ -83,38 +94,50 @@ class BloodGlucoseViewSet(ModelViewSet):
                     obj = BloodGlucose.objects.get(id=pk, user_id=self.request.user.id)
                     cache.set(cache_key, obj, timeout=300)  # Cache trong 5 phút
                 except BloodGlucose.DoesNotExist:
+                    logging.error(f"Blood Glucose record not found for id {pk} and user {self.request.user.id}")
                     raise NotFound("Blood Glucose record not found")
 
             return obj
-            # return BloodGlucose.objects.get(id=pk, user_id=self.request.user.id)
         except BloodGlucose.DoesNotExist:
+            logging.error(f"Blood Glucose record not found for id {pk} and user {self.request.user.id}")
             raise NotFound("Blood Glucose record not found")
+        except Exception as e:
+            logging.error(f"Error retrieving blood glucose record: {str(e)}")
+            raise NotFound(f"Error retrieving blood glucose record: {str(e)}")
 
     def update(self, request, *args, **kwargs):
-        blood_glucose = self.get_object()
-        serializer = self.get_serializer(blood_glucose, data=request.data, partial=True)
-        if serializer.is_valid():
-            instance = serializer.save()
+        try:
+            blood_glucose = self.get_object()
+            serializer = self.get_serializer(blood_glucose, data=request.data, partial=True)
+            if serializer.is_valid():
+                instance = serializer.save()
 
-            # Xóa cache sau khi cập nhật
-            cache.delete(f"blood_glucose_list_{self.request.user.id}")
-            cache.delete(f"blood_glucose_{instance.id}_{self.request.user.id}")
+                # Xóa cache sau khi cập nhật
+                cache.delete(f"blood_glucose_list_{self.request.user.id}")
+                cache.delete(f"blood_glucose_{instance.id}_{self.request.user.id}")
 
-            message = {
-                "user_id": instance.user_id,
-                "blood_glucose": instance.blood_glucose,
-                "unit": instance.unit,
-                "meal": instance.meal,
-            }
-            publish_message("blood_glucose_queue", message)
+                message = {
+                    "user_id": instance.user_id,
+                    "blood_glucose": instance.blood_glucose,
+                    "unit": instance.unit,
+                    "meal": instance.meal,
+                }
+                publish_message("blood_glucose_queue", message)
 
+                return Response({
+                    "status": "success",
+                    "status_code": status.HTTP_200_OK,
+                    "message": "Blood glucose record updated successfully",
+                    "data": serializer.data
+                }, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logging.error(f"Error updating blood glucose record: {str(e)}")
             return Response({
-                "status": "success",
-                "status_code": status.HTTP_200_OK,
-                "message": "Blood glucose record updated successfully",
-                "data": serializer.data
-            }, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                "status": "error",
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class BloodPressureViewSet(ModelViewSet):
     """
@@ -144,6 +167,7 @@ class BloodPressureViewSet(ModelViewSet):
 
             return queryset
         except Exception as e:
+            logging.error(f"Error retrieving blood pressure records: {str(e)}")
             raise NotFound(f"Error retrieving blood pressure records: {str(e)}")
     
     # Save the serializer with the current user as the owner
@@ -160,6 +184,7 @@ class BloodPressureViewSet(ModelViewSet):
             publish_message("blood_pressure_queue", message)
 
         except Exception as e:
+            logging.error(f"Error creating blood pressure record: {str(e)}")
             return Response({
                 "status": "error",
                 "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -237,6 +262,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             print("Refresh Token:", response.data['refresh'])
             return response
         except Exception as e:
+            logging.error(f"Error logging in: {str(e)}")
             return Response({
                 "status": "error",
                 "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -321,6 +347,7 @@ def soft_delete_user(request):
             "message": "User has been soft deleted."
         }, status=status.HTTP_200_OK)
     except Exception as e:
+        logging.error(f"Error soft deleting user: {str(e)}")
         return Response({
             "status": "error",
             "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -349,6 +376,7 @@ def hard_delete_user(request):
             "message": "User and all related health data have been permanently deleted."
         }, status=status.HTTP_200_OK)
     except Exception as e:
+        logging.error(f"Error hard deleting user: {str(e)}")
         return Response({
             "status": "error",
             "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,

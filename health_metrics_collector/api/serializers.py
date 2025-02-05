@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from .models import BloodGlucose, BloodPressure
+import logging
 
 User = get_user_model()
 
@@ -22,9 +23,15 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}
         }
     def create(self, validated_data):
-        # Tạo user mới và hash mật khẩu
-        user = User.objects.create_user(**validated_data)
-        return user
+        try:
+            # Tạo user mới và hash mật khẩu
+            user = User.objects.create_user(**validated_data)
+            return user
+        except Exception as e:
+            # Log the exception
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating user: {e}")
+            raise serializers.ValidationError("An error occurred while creating the user.")
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -72,13 +79,23 @@ class BloodGlucoseSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        return BloodGlucose.objects.create(**validated_data)
+        try:
+            return BloodGlucose.objects.create(**validated_data)
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating BloodGlucose record: {e}")
+            raise serializers.ValidationError("An error occurred while creating the BloodGlucose record.")
 
     def update(self, instance, validated_data):
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
+        try:
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+            return instance
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error updating BloodGlucose record: {e}")
+            raise serializers.ValidationError("An error occurred while updating the BloodGlucose record.")
     
 class BloodPressureSerializer(serializers.Serializer):
     """This class is used to serialize the BloodPressure model.
@@ -124,9 +141,14 @@ class BloodPressureSerializer(serializers.Serializer):
         Returns:
             BloodPressure: The newly created BloodPressure object.
         """
-        validated_data['timestamp'] = timezone.now()
-        validated_data['unit'] = 'mm Hg'
-        return BloodPressure.objects.create(**validated_data)
+        try:
+            validated_data['timestamp'] = timezone.now()
+            validated_data['unit'] = 'mm Hg'
+            return BloodPressure.objects.create(**validated_data)
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating BloodPressure record: {e}")
+            raise serializers.ValidationError("An error occurred while creating the BloodPressure record.")
 
     def update(self, instance, validated_data):
         """
@@ -139,10 +161,15 @@ class BloodPressureSerializer(serializers.Serializer):
         Returns:
             Model: The updated instance.
         """
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
+        try:
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+            return instance
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error updating BloodPressure record: {e}")
+            raise serializers.ValidationError("An error occurred while updating the BloodPressure record.")
     
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -151,16 +178,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ['phone_number', 'password', 'first_name', 'last_name']
 
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            phone_number=validated_data['phone_number'],
-            password=validated_data['password'],
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', ''),
-        )
-        return user
+        def create(self, validated_data):
+            try:
+                user = User.objects.create_user(
+                    phone_number=validated_data['phone_number'],
+                    password=validated_data['password'],
+                    first_name=validated_data.get('first_name', ''),
+                    last_name=validated_data.get('last_name', ''),
+                )
+                return user
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error creating user: {e}")
+                raise serializers.ValidationError("An error occurred while creating the user.")
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        attrs['username'] = attrs.get('phone_number', '')
-        return super().validate(attrs)
+        try:
+            attrs['username'] = attrs.get('phone_number', '')
+            return super().validate(attrs)
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error validating token: {e}")
+            raise serializers.ValidationError("An error occurred while validating the token.")
