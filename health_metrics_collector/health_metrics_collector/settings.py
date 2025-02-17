@@ -75,6 +75,8 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 CELERY_BROKER_URL = 'amqp://admin:admin@localhost:5672//'
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
 
 # Application definition
 
@@ -88,6 +90,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'api',
     'drf_spectacular',
+    # 'rest_framework_simplejwt.token_blacklist',
 ]
 
 STATIC_URL = '/static/'

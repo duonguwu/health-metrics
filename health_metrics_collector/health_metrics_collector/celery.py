@@ -11,3 +11,10 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Tự động tìm task trong tất cả apps của Django
 app.autodiscover_tasks()
+
+app.conf.update(
+    task_acks_late=True,  # Đảm bảo chỉ ACK sau khi xử lý xong
+    worker_prefetch_multiplier=1,  # Mỗi worker chỉ lấy 1 task để tránh overload
+    task_reject_on_worker_lost=True,  # Trả lại task nếu worker bị mất kết nối
+    broker_heartbeat=10  # Kiểm tra kết nối với RabbitMQ mỗi 10s
+)

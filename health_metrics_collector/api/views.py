@@ -12,6 +12,7 @@ from rest_framework.decorators import api_view, permission_classes
 
 from django.core.cache import cache
 from django.http import JsonResponse
+from django.utils import timezone
 
 from .models import BloodGlucose, BloodPressure
 from .serializers import (
@@ -24,6 +25,8 @@ from .serializers import (
 )
 from .permissions import IsOwnerPermission
 from .rabbitmq import publish_message
+from .tasks import process_blood_pressure
+
 
 class BloodGlucoseViewSet(ModelViewSet):
     """
@@ -173,15 +176,23 @@ class BloodPressureViewSet(ModelViewSet):
     # Save the serializer with the current user as the owner
     def perform_create(self, serializer):
         try:
-            # serializer.save(user_id=self.request.user.id)
-            instance = serializer.save(user_id=self.request.user.id)
             message = {
-                "user_id": instance.user_id,
-                "systolic": instance.systolic,
-                "diastolic": instance.diastolic,
-                "timestamp": instance.timestamp.isoformat()
+                "user_id": self.request.user.id,
+                "systolic": serializer.validated_data["systolic"],
+                "diastolic": serializer.validated_data["diastolic"],
             }
-            publish_message("blood_pressure_queue", message)
+            print("Message:", message)
+            # Batch message vào Memcached
+            cache_key = f"blood_pressure_batch_{self.request.user.id}"
+            batch = cache.get(cache_key) or []
+            batch.append(message)
+            cache.set(cache_key, batch, timeout=300)  # Lưu batch trong 5 phút
+
+            # Nếu đủ 5 bản ghi, gửi batch đến RabbitMQ
+            if len(batch) >= 5:
+                print("Sending batch to RabbitMQ")
+                publish_message("blood_pressure_queue", batch)
+                cache.delete(cache_key)  # Xóa batch sau khi gửi
 
         except Exception as e:
             logging.error(f"Error creating blood pressure record: {str(e)}")
